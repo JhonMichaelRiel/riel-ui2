@@ -2,9 +2,15 @@ import { useEffect, useState } from 'react'
 import './App.css'
 
 function App() {
+  const [authMode, setAuthMode] = useState('login')
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [authMessage, setAuthMessage] = useState('')
+  const [authMessageType, setAuthMessageType] = useState('')
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false)
 
   const [isLoggedIn, setIsLoggedIn] = useState(
     () => Boolean(localStorage.getItem('access_token')),
@@ -128,6 +134,21 @@ function App() {
     setDescription(product.description || '')
     setPrice(product.price)
     setQuantity(product.quantity)
+
+    if (window.matchMedia('(max-width: 900px)').matches) {
+      document.getElementById('productName')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+    }
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setProductName('')
+    setDescription('')
+    setPrice('')
+    setQuantity('')
   }
 
   const handleUpdateProduct = async (event) => {
@@ -281,6 +302,8 @@ function App() {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    setAuthMessage('')
+    setIsSubmittingAuth(true)
 
     try {
       const response = await fetch(
@@ -300,7 +323,8 @@ function App() {
       const data = await response.json()
 
       if (!response.ok) {
-        console.error(data.error || 'Login failed')
+        setAuthMessage(data.error || 'Unable to sign in. Please try again.')
+        setAuthMessageType('error')
         return
       }
 
@@ -309,10 +333,57 @@ function App() {
       localStorage.setItem('user', JSON.stringify(data.user))
 
       setIsLoggedIn(true)
-
-      console.log('Login successful')
     } catch (error) {
       console.error('Login failed:', error)
+      setAuthMessage('Could not reach the server. Make sure the backend is running.')
+      setAuthMessageType('error')
+    } finally {
+      setIsSubmittingAuth(false)
+    }
+  }
+
+  const handleSignup = async (event) => {
+    event.preventDefault()
+    setAuthMessage('')
+
+    if (password !== confirmPassword) {
+      setAuthMessage('Your passwords do not match.')
+      setAuthMessageType('error')
+      return
+    }
+
+    setIsSubmittingAuth(true)
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/signup`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, email, password }),
+        },
+      )
+      const data = await response.json()
+
+      if (!response.ok) {
+        setAuthMessage(data.error || 'Unable to create your account. Please try again.')
+        setAuthMessageType('error')
+        return
+      }
+
+      setAuthMode('login')
+      setPassword('')
+      setConfirmPassword('')
+      setAuthMessage('Your account is ready. Sign in with your email and password.')
+      setAuthMessageType('success')
+    } catch (error) {
+      console.error('Signup failed:', error)
+      setAuthMessage('Could not reach the server. Make sure the backend is running.')
+      setAuthMessageType('error')
+    } finally {
+      setIsSubmittingAuth(false)
     }
   }
 
@@ -325,28 +396,38 @@ function App() {
               <div className="login-icon">P</div>
 
               <div>
-                <h1>Product Management</h1>
-                <p>Manage your product inventory</p>
+                <span className="dashboard-eyebrow">STOCKWISE INVENTORY</span>
+                <h1>Product management</h1>
+                <p>Your products, organized in one place.</p>
               </div>
             </div>
 
-            <button
-              type="button"
-              className="logout-button"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
+            <div className="dashboard-header-actions">
+              <span className="dashboard-user">
+                <span className="user-status-dot" />
+                Inventory workspace
+              </span>
+              <button
+                type="button"
+                className="logout-button"
+                onClick={handleLogout}
+              >
+                Log out
+              </button>
+            </div>
           </header>
 
           <div className="dashboard-content">
-            <section className="form-card">
+            <section className={`form-card${editingId ? ' is-editing' : ''}`}>
               <div className="section-heading">
-                <h2>{editingId ? 'Edit Product' : 'Add Product'}</h2>
+                <span className="section-kicker">
+                  {editingId ? `EDITING PRODUCT #${editingId}` : 'INVENTORY'}
+                </span>
+                <h2>{editingId ? 'Update product' : 'Add a product'}</h2>
                 <p>
                   {editingId
-                    ? 'Update the selected product information.'
-                    : 'Enter the information for your new product.'}
+                    ? 'Make your changes below, then save the updated details.'
+                    : 'Add a new item to your product inventory.'}
                 </p>
               </div>
 
@@ -424,18 +505,30 @@ function App() {
                   type="submit"
                   className="login-button"
                 >
-                  {editingId ? 'Update Product' : 'Add Product'}
+                  {editingId ? 'Save changes' : 'Add product'}
                 </button>
+                {editingId && (
+                  <button
+                    type="button"
+                    className="cancel-edit-button"
+                    onClick={cancelEdit}
+                  >
+                    Cancel editing
+                  </button>
+                )}
               </form>
             </section>
 
             <section className="products-card">
-              <div className="section-heading">
-                <h2>Products</h2>
-                <p>
-                  {products.length}{' '}
-                  {products.length === 1 ? 'product' : 'products'} in inventory
-                </p>
+              <div className="products-heading">
+                <div className="section-heading">
+                  <span className="section-kicker">YOUR CATALOG</span>
+                  <h2>Products</h2>
+                  <p>Review and update the items in your inventory.</p>
+                </div>
+                <span className="product-count">
+                  {products.length} {products.length === 1 ? 'item' : 'items'}
+                </span>
               </div>
 
               {products.length === 0 ? (
@@ -463,7 +556,7 @@ function App() {
                     <tbody>
                       {products.map((product) => (
                         <tr key={product.id}>
-                          <td>
+                          <td data-label="Product">
                             <div className="product-info">
                               <strong>{product.product_name}</strong>
 
@@ -474,17 +567,17 @@ function App() {
                             </div>
                           </td>
 
-                          <td>
+                          <td data-label="Price">
                             ₱{Number(product.price).toFixed(2)}
                           </td>
 
-                          <td>
+                          <td data-label="Quantity">
                             <span className="quantity-badge">
                               {product.quantity}
                             </span>
                           </td>
 
-                          <td>
+                          <td data-label="Actions">
                             <div className="action-buttons">
                               <button
                                 type="button"
@@ -522,64 +615,174 @@ function App() {
 
   return (
     <main className="login-page">
-      <section className="login-card">
-        <div className="login-header">
-          <div className="login-icon">P</div>
-
-          <h1>Welcome Back</h1>
-          <p>Sign in to manage your products</p>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email address</label>
-
-            <input
-              type="email"
-              id="email"
-              placeholder="admin@example.com"
-              value={email}
-              onChange={(event) =>
-                setEmail(event.target.value)
-              }
-              required
-            />
+      <section className="auth-card">
+        <div className="auth-showcase">
+          <div className="auth-brand">
+            <span className="auth-brand-mark">P</span>
+            <span>Stockwise</span>
           </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-
-            <div className="password-wrapper">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(event) =>
-                  setPassword(event.target.value)
-                }
-                required
-              />
-
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() =>
-                  setShowPassword(!showPassword)
-                }
-              >
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
+          <div className="showcase-copy">
+            <span className="showcase-eyebrow">PRODUCT MANAGEMENT</span>
+            <h1>Everything in stock. Everything in control.</h1>
+            <p>
+              A clearer, calmer way to track products, stay on top of stock,
+              and keep your business moving.
+            </p>
+          </div>
+          <div className="showcase-preview" aria-hidden="true">
+            <div className="preview-heading">
+              <span className="preview-window-dots"><i /><i /><i /></span>
+              <span>INVENTORY OVERVIEW</span>
+              <span className="preview-live"><i /> LIVE</span>
+            </div>
+            <div className="preview-summary">
+              <div><strong>128</strong><span>Total products</span></div>
+              <div><strong>94%</strong><span>In stock</span></div>
+              <div className="preview-chart" />
+            </div>
+            <div className="preview-product">
+              <span className="preview-product-icon">A</span>
+              <span className="preview-product-name"><strong>Wireless headphones</strong><small>Electronics</small></span>
+              <span className="preview-stock">In stock</span>
+            </div>
+            <div className="preview-product">
+              <span className="preview-product-icon preview-product-icon-alt">S</span>
+              <span className="preview-product-name"><strong>Everyday backpack</strong><small>Accessories</small></span>
+              <span className="preview-stock">In stock</span>
             </div>
           </div>
+          <div className="showcase-stat">
+            <span className="stat-dot" />
+            <span>Simple, secure inventory management</span>
+          </div>
+          <div className="showcase-orb showcase-orb-one" />
+          <div className="showcase-orb showcase-orb-two" />
+        </div>
 
-          <button
-            type="submit"
-            className="login-button"
-          >
-            Sign In
-          </button>
-        </form>
+        <div className="auth-panel">
+          <div className="auth-form-wrap">
+            <div className="auth-mobile-brand">
+              <span className="auth-brand-mark">P</span>
+              <span>Stockwise</span>
+            </div>
+            <div className="auth-heading">
+              <span className="auth-kicker">
+                {authMode === 'login' ? 'WELCOME BACK' : 'GET STARTED'}
+              </span>
+              <h2>
+                {authMode === 'login' ? 'Welcome back' : 'Create your account'}
+              </h2>
+              <p>
+                {authMode === 'login'
+                  ? 'Sign in to access your product inventory.'
+                  : 'Enter your details below to get started.'}
+              </p>
+            </div>
+
+            {authMessage && (
+              <div className={`auth-message ${authMessageType}`} role="status">
+                {authMessage}
+              </div>
+            )}
+
+            <form onSubmit={authMode === 'login' ? handleSubmit : handleSignup}>
+              {authMode === 'signup' && (
+                <div className="form-group">
+                  <label htmlFor="username">Username</label>
+                  <input
+                    type="text"
+                    id="username"
+                    placeholder="e.g. alexmorgan"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    autoComplete="username"
+                    maxLength={100}
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="form-group">
+                <label htmlFor="email">Email address</label>
+                <input
+                  type="email"
+                  id="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <div className="password-wrapper">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    placeholder={authMode === 'signup' ? 'At least 8 characters' : 'Enter your password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+                    minLength={authMode === 'signup' ? 8 : undefined}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+
+              {authMode === 'signup' && (
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">Confirm password</label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    placeholder="Enter your password again"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="login-button"
+                disabled={isSubmittingAuth}
+              >
+                {isSubmittingAuth
+                  ? 'Please wait...'
+                  : authMode === 'login'
+                    ? 'Sign in'
+                    : 'Create account'}
+              </button>
+            </form>
+
+            <p className="auth-switch">
+              {authMode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode(authMode === 'login' ? 'signup' : 'login')
+                  setAuthMessage('')
+                }}
+              >
+                {authMode === 'login' ? ' Sign up' : ' Sign in'}
+              </button>
+            </p>
+          </div>
+          <p className="auth-footer">© 2026 Stockwise · Inventory made simple</p>
+        </div>
       </section>
     </main>
   )
