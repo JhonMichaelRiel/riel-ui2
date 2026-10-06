@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
+
 function App() {
   const [authMode, setAuthMode] = useState('login')
   const [username, setUsername] = useState('')
@@ -41,7 +43,7 @@ function App() {
         const accessToken = localStorage.getItem('access_token')
 
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/products`,
+          `${API_BASE_URL}/api/products`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -79,7 +81,7 @@ function App() {
       const accessToken = localStorage.getItem('access_token')
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/products`,
+        `${API_BASE_URL}/api/products`,
         {
           method: 'POST',
           headers: {
@@ -158,7 +160,7 @@ function App() {
       const accessToken = localStorage.getItem('access_token')
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/products/${editingId}`,
+        `${API_BASE_URL}/api/products/${editingId}`,
         {
           method: 'PUT',
           headers: {
@@ -225,7 +227,7 @@ function App() {
       const accessToken = localStorage.getItem('access_token')
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/products/${id}`,
+        `${API_BASE_URL}/api/products/${id}`,
         {
           method: 'DELETE',
           headers: {
@@ -269,7 +271,7 @@ function App() {
       const refreshToken = localStorage.getItem('refresh_token')
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/logout`,
+        `${API_BASE_URL}/api/logout`,
         {
           method: 'POST',
           headers: {
@@ -307,7 +309,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/login`,
+        `${API_BASE_URL}/api/login`,
         {
           method: 'POST',
           headers: {
@@ -356,7 +358,7 @@ function App() {
 
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/signup`,
+        `${API_BASE_URL}/api/signup`,
         {
           method: 'POST',
           headers: {
