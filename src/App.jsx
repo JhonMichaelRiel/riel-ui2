@@ -1,7 +1,7 @@
   import { useEffect, useState } from 'react'
   import './App.css'
 
-  const API_BASE_URL = (import.meta.env.API_BASE_URL || '').replace(/\/+$/, '')
+  const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 
   function App() {
     const [authMode, setAuthMode] = useState('login')
