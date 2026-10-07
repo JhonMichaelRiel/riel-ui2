@@ -25,6 +25,19 @@ function App() {
   const [quantity, setQuantity] = useState('')
   const [editingId, setEditingId] = useState(null)
 
+  const totalProducts = products.length
+  const totalUnits = products.reduce(
+    (sum, product) => sum + Number(product.quantity || 0),
+    0,
+  )
+  const lowStockCount = products.filter(
+    (product) => Number(product.quantity || 0) <= 5,
+  ).length
+  const inventoryValue = products.reduce(
+    (sum, product) => sum + Number(product.price || 0) * Number(product.quantity || 0),
+    0,
+  )
+
   const clearAuth = () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
@@ -418,6 +431,32 @@ function App() {
               </button>
             </div>
           </header>
+
+          <div className="metric-grid" aria-label="Inventory summary">
+            <article className="metric-card">
+              <span className="metric-label">Total products</span>
+              <strong>{totalProducts}</strong>
+              <small>Across your catalog</small>
+            </article>
+
+            <article className="metric-card accent-card">
+              <span className="metric-label">Inventory units</span>
+              <strong>{totalUnits}</strong>
+              <small>Items ready to sell</small>
+            </article>
+
+            <article className="metric-card warning-card">
+              <span className="metric-label">Low stock</span>
+              <strong>{lowStockCount}</strong>
+              <small>{lowStockCount === 0 ? 'All clear' : 'Items need refill'}</small>
+            </article>
+
+            <article className="metric-card success-card">
+              <span className="metric-label">Inventory value</span>
+              <strong>₱{inventoryValue.toLocaleString('en-PH', { maximumFractionDigits: 2 })}</strong>
+              <small>Estimated stock value</small>
+            </article>
+          </div>
 
           <div className="dashboard-content">
             <section className={`form-card${editingId ? ' is-editing' : ''}`}>
